@@ -1,0 +1,125 @@
+PRISM
+=====
+
+Version: 4.9
+Date: Tue Nov 25 15:43:08 GMT 2025
+Hostname: hemantharaj-Inspiron-15-3520
+Memory limits: cudd=1g, java(heap)=1g
+Command line: prism /home/hemantharaj/Program/research/Multi_Agent_Charging_Problem/battery-charge-scheduling/models/model_rhc.prism /home/hemantharaj/Program/research/Multi_Agent_Charging_Problem/battery-charge-scheduling/models/batterycost_model_prop.props -paretoepsilon 0.1 -v -exportadv /home/hemantharaj/Program/research/Multi_Agent_Charging_Problem/battery-charge-scheduling/models/model_rhc.adv -exportprodstates /home/hemantharaj/Program/research/Multi_Agent_Charging_Problem/battery-charge-scheduling/models/model_rhc.sta -exporttarget /home/hemantharaj/Program/research/Multi_Agent_Charging_Problem/battery-charge-scheduling/models/model_rhc.lab
+
+Parsing PRISM model file "/home/hemantharaj/Program/research/Multi_Agent_Charging_Problem/battery-charge-scheduling/models/model_rhc.prism"...
+
+Type:        MDP
+Modules:     time_model battery_model charging_state cluster_evolution
+Variables:   t task_present o e battery charging cl
+Rewards:     "rew" "batterycost"
+
+Parsing properties file "/home/hemantharaj/Program/research/Multi_Agent_Charging_Problem/battery-charge-scheduling/models/batterycost_model_prop.props"...
+
+1 property:
+(1) multi(R{"batterycost"}min=? [ C ], R{"rew"}max=? [ C ])
+
+---------------------------------------------------------------------
+
+Model checking: multi(R{"batterycost"}min=? [ C ], R{"rew"}max=? [ C ])
+
+Building model (engine:symbolic)...
+
+Warning: Update 5 of command 108 of module "battery_model" doesn't do anything ("(battery'=37)", line 136, column 118)
+
+Warning: Update 5 of command 209 of module "battery_model" doesn't do anything ("(battery'=37)", line 237, column 122)
+
+Computing reachable states...
+
+Reachability (BFS): 24 iterations in 0.01 seconds (average 0.000417, setup 0.00)
+
+Time for model construction: 0.123 seconds.
+
+Warning: Deadlocks detected and fixed in 472 states
+
+Type:        MDP
+States:      7985 (1 initial)
+Transitions: 37679
+
+Transition matrix: 5511 nodes (77 terminal), 37679 minterms, vars: 17r/17c/6nd
+Switching engine since only sparse engine currently supports this computation...
+
+Warning: Disabling Prob1 since this is needed for adversary generation
+Total time for product construction: 0.0 seconds.
+
+States:      7985 (1 initial)
+Transitions: 37679
+
+Transition matrix: 5511 nodes (77 terminal), 37679 minterms, vars: 17r/17c/6nd
+
+Exporting product state space to file "/home/hemantharaj/Program/research/Multi_Agent_Charging_Problem/battery-charge-scheduling/models/model_rhc.sta"...
+
+Exporting target states info to file "/home/hemantharaj/Program/research/Multi_Agent_Charging_Problem/battery-charge-scheduling/models/model_rhc.lab"...
+Prob0A: 1 iterations in 0.00 seconds (average 0.000000, setup 0.00)
+
+yes = 0, no = 0, maybe = 7985
+
+Computing remaining probabilities...
+Switching engine since only sparse engine currently supports this computation...
+Engine: Sparse
+Optimising weighted sum for reward objective 1/2: weights (1.0, 0.0)
+Iterative method: 28 iterations in 0.02 seconds (average 0.000714, setup 0.00)
+Optimal value for weights [1.000000,0.000000] from initial state: -1.000000
+
+Adversary written to file "/home/hemantharaj/Program/research/Multi_Agent_Charging_Problem/battery-charge-scheduling/models/model_rhc1.adv".
+Computed point: (-1.0, 1.1213456879620132)
+Upper bound is [-1.0, 1.1213456879620132]
+Optimising weighted sum for reward objective 2/2: weights (0.0, 1.0)
+Iterative method: 29 iterations in 0.01 seconds (average 0.000345, setup 0.00)
+Optimal value for weights [0.000000,1.000000] from initial state: 2.439416
+
+Adversary written to file "/home/hemantharaj/Program/research/Multi_Agent_Charging_Problem/battery-charge-scheduling/models/model_rhc2.adv".
+Computed point: (-3.104371253455536, 2.4394156828185096)
+Upper bound is [-3.104371253455536, 2.4394156828185096]
+Points for the initial tile: [(-1.0, 1.1213456879620132), (-3.104371253455536, 2.4394156828185096)]
+The initial direction is (0.3851256746939267, 0.6148743253060732)
+Optimising weighted sum of objectives: weights (0.3851256746939267, 0.6148743253060732)
+Iterative method: 29 iterations in 0.01 seconds (average 0.000345, setup 0.00)
+Optimal value for weights [0.385126,0.614874] from initial state: 0.411422
+
+Adversary written to file "/home/hemantharaj/Program/research/Multi_Agent_Charging_Problem/battery-charge-scheduling/models/model_rhc3.adv".
+Computed point: (-1.155605127143124, 1.392926714337314)
+
+3: New point is (-1.155605127143124, 1.392926714337314).
+TileList:[(1.0, 1.1213456879620132), (3.104371253455536, 2.4394156828185096)]
+New direction is (0.349382251381599, 0.6506177486184009)
+Optimising weighted sum of objectives: weights (0.349382251381599, 0.6506177486184009)
+Iterative method: 29 iterations in 0.02 seconds (average 0.000690, setup 0.00)
+Optimal value for weights [0.349382,0.650618] from initial state: 0.511371
+
+Adversary written to file "/home/hemantharaj/Program/research/Multi_Agent_Charging_Problem/battery-charge-scheduling/models/model_rhc4.adv".
+Computed point: (-2.987104594859355, 2.390054533881871)
+
+4: New point is (-2.987104594859355, 2.390054533881871).
+TileList:[(1.155605127143124, 1.392926714337314), (3.104371253455536, 2.4394156828185096), (1.0, 1.1213456879620132)]
+New direction is (0.6357439821925019, 0.3642560178074981)
+Optimising weighted sum of objectives: weights (0.6357439821925019, 0.3642560178074981)
+Iterative method: 29 iterations in 0.02 seconds (average 0.000690, setup 0.00)
+Optimal value for weights [0.635744,0.364256] from initial state: -0.179040
+
+Adversary written to file "/home/hemantharaj/Program/research/Multi_Agent_Charging_Problem/battery-charge-scheduling/models/model_rhc5.adv".
+Computed point: (-1.0272000850948513, 1.3012724358151706)
+
+5: New point is (-1.0272000850948513, 1.3012724358151706).
+TileList:[(1.0, 1.1213456879620132), (1.155605127143124, 1.392926714337314), (2.987104594859355, 2.390054533881871), (3.104371253455536, 2.4394156828185096)]
+New direction is null
+The value iteration(s) took 0.099 seconds altogether.
+Number of weight vectors used: 5
+Computed 5 points altogether: [(-2.987104594859355, 2.390054533881871), (-3.104371253455536, 2.4394156828185096), (-1.155605127143124, 1.392926714337314), (-1.0272000850948513, 1.3012724358151706), (-1.0, 1.1213456879620132)]
+Multi-objective value iterations took 0.1 s.
+
+Value in the initial state: [(2.987104594859355, 2.390054533881871), (3.104371253455536, 2.4394156828185096), (1.155605127143124, 1.392926714337314), (1.0272000850948513, 1.3012724358151706), (1.0, 1.1213456879620132)]
+
+Time for model checking: 0.225 seconds.
+
+Result: [(2.987104594859355, 2.390054533881871), (3.104371253455536, 2.4394156828185096), (1.155605127143124, 1.392926714337314), (1.0272000850948513, 1.3012724358151706), (1.0, 1.1213456879620132)]
+
+---------------------------------------------------------------------
+
+Note: There were 4 warnings during computation.
+
