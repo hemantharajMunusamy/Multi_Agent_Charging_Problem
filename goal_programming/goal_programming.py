@@ -1,8 +1,8 @@
 import time
 from math import ceil, floor
 from operator import itemgetter, mod
-from data import *
-from BatteryScenarioDto import GoalProgrammingParameterDto
+from data_model.data import *
+from data_model.BatteryScenarioDto import GoalProgrammingParameterDto
 from black_board import *
 import pulp as lp
 import csv
