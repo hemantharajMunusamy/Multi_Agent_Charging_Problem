@@ -5,9 +5,9 @@ from io import TextIOWrapper
 import subprocess
 import os
 import copy
-from utils import calculate_battery_model_from_transition, get_probabilistic_reward_model, round_off_add_to_one
+from .utils import calculate_battery_model_from_transition, get_probabilistic_reward_model, round_off_add_to_one
 import numpy as np
-import mdp
+from .mdp import MDP
 
 #PRISM_PATH = '/home/milan/prism/prism/bin'
 PRISM_PATH = '/home/hemantharaj/Downloads/prism-4.9-linux64-x86/bin'
@@ -22,7 +22,7 @@ class RecedingHorizonControl:
         self.gocharge_model = self.get_gocharge_model(self.charge_model)
 
         self.sample_reward = []
-        self.actual_reward = []
+        self.actual_reward = None
         self.exp_reward = []
         self.horizon = horizon ## in terms of intervals
         self.no_simulations = 1
@@ -35,7 +35,7 @@ class RecedingHorizonControl:
 
         self.actions = ['gather_reward', 'go_charge', 'stay_charging']
 
-        self.model = mdp.MDP(self.req_pareto_point, self.charge_model, self.discharge_model, self.gocharge_model)
+        self.model = MDP(self.req_pareto_point, self.charge_model, self.discharge_model, self.gocharge_model, self.clusters)
 
         self.init_battery = None
         self.init_charging = None
@@ -46,7 +46,7 @@ class RecedingHorizonControl:
         self.time =[]
         self.pareto_point = []
 
-    def initiate(self, init_battery, init_charging, init_clid, actual_reward):
+    def initiate(self, init_battery:int, init_charging:int, init_clid:int, actual_reward):
         """Initiate the Receding Horizon Control with initial robot battery, charging state and task present
 
         Args:
@@ -54,10 +54,10 @@ class RecedingHorizonControl:
             init_charging (_type_): _description_
             init_clid (_type_): _description_
         """
-        self.init_battery = init_battery
-        self.init_charging = init_charging
-        self.init_clid = init_clid
-        self.actual_reward = actual_reward
+        self.init_battery = int(init_battery)
+        self.init_charging = int(init_charging)
+        self.init_clid = int(init_clid)
+        self.actual_reward = int(actual_reward)
 
 
     def get_plan(self, fname):
@@ -130,9 +130,11 @@ class RecedingHorizonControl:
     def get_next_state(self, t):
         current_state = self.model.get_initial_state()
         print("Current state ", current_state)
+        print("Current State ", self.get_state(current_state))
         next_state, req_a, obtained_reward, charging, battery = self.model.get_next_state(current_state=current_state, 
-                                                                                          reward=self.actual_reward[t])
-        print("Next state ", next_state)
+                                                                                          reward=self.actual_reward)
+        print("Next state ", next_state, req_a)
+        print("Next state ", self.get_state(next_state))
         return next_state
     
     def get_state(self, s):
@@ -147,11 +149,11 @@ class RecedingHorizonControl:
         """
         f.write('module time_model\n')
         f.write(f't:[0..{self.horizon}] init 0;\n')
-        f.write(f'task_present:[0..1] init {1 if init_clid is not None else 0};\n')
-        f.write('o:[0..1] init 1;\n')
-        f.write(f'e:[0..1] init {1 if init_clid is not None else 0};\n')
+        f.write(f'task_present:[0..1] init {0};\n')
+        f.write(f'o:[0..1] init {0};\n')
+        f.write(f'e:[0..1] init {0};\n')
         for i in range(self.horizon):
-            f.write(f"[observe] (t={i}) & (o=0) & (e=0) -> {task_prob[i][1]}:(task_present'=1) & (o'=1) + {task_prob[i][0]}:(task_present'=0) & (o'=1);\n")
+            f.write(f"[observe] (t={i}) & (o=0) & (e=0) -> {task_prob[i][0]}:(task_present'=1) & (o'=1) + {task_prob[i][1]}:(task_present'=0) & (o'=1);\n")
         f.write(f"[evaluate] (t<{self.horizon}) & (o=1) & (task_present=1) & (e=0) -> (e'=1);\n")
         for action in self.actions:
             f.write(f"[{action}] (t<{self.horizon}) & (o=1) & (task_present=1) & (e=1) -> (t'=t+1) & (o'=0) & (e'=0) ;\n")

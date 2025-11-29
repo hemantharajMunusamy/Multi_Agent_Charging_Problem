@@ -1,12 +1,12 @@
 import numpy as np
 import os
-from utils import parse_adversary, read_prism_output, round_off_add_to_one
+from .utils import parse_adversary, read_prism_output, round_off_add_to_one
 
 FILE_DIRECTORY_NAME = os.path.dirname(os.path.realpath(__file__))
 
 class MDP:
 
-    def __init__(self, pareto_point, charge_model, discharge_model, gocharge_model):
+    def __init__(self, pareto_point, charge_model, discharge_model, gocharge_model, clusters):
         self.path = FILE_DIRECTORY_NAME+'/models/'
         self.path_data = self.path + '/data/'
         self.req_pareto_point = pareto_point
@@ -16,6 +16,7 @@ class MDP:
         self.charge_model = charge_model
         self.discharge_model = discharge_model
         self.gocharge_model = gocharge_model
+        self.clusters = clusters
     
     def initiate(self, result_file_path):
         f_no = read_prism_output(result_file_path, self.req_pareto_point)

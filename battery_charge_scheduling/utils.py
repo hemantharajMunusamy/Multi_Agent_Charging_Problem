@@ -1,13 +1,15 @@
 """ Utility function to support the battery charge scheduler"""
+import os
 import yaml
 import pandas as pd
 import numpy as np
 import ast
 
-CHARGING_FNAME = "./models/battery_charge_model.yaml"
-DISCHARGING_FNAME = "./models/battery_discharge_model.yaml"
-TASK_FNAME = "./models/task_prob.csv"
-REWARD_FNAME = "./models/reward_prob.csv"
+FILE_DIRECTORY_NAME = os.path.dirname(os.path.realpath(__file__))
+CHARGING_FNAME = FILE_DIRECTORY_NAME + "/models/battery_charge_model.yaml"
+DISCHARGING_FNAME = FILE_DIRECTORY_NAME + "/models/battery_discharge_model.yaml"
+TASK_FNAME = FILE_DIRECTORY_NAME + "/models/task_prob.csv"
+REWARD_FNAME = FILE_DIRECTORY_NAME + "/models/reward_prob.csv"
 
 def read_battery_model(charging_fname:str, discharging_fname:str):
     """ Read the battery model from the given file name"""
@@ -136,67 +138,103 @@ def parse_adversary(path:str, filenames:list):
         #self.initial_state = self.get_initial_state()
     return labels, states, policy
 
-def read_prism_output(result_file_path:str, req_pareto_point):
-    """reading output from prism to find policy file for bcth
+# def read_prism_output(result_file_path:str, req_pareto_point):
+#     """reading output from prism to find policy file for bcth
 
-    Returns:
-        _type_: _description_
-    """
-    pre1_point = None
-    pre2_point = None
-    pareto_point = []
-    with open(result_file_path, 'r', encoding='utf-8') as f:
-        line_list = f.readlines()
-        f_no_list = []
-        pareto_points = []
-        init = 0
-        for e, line in enumerate(line_list):
-            if 'pre1.adv' in line:
-                pre1_point = abs(float(line_list[e+1].split(',')[0].split('(')[1].strip()))
+#     Returns:
+#         _type_: _description_
+#     """
+#     pre1_point = None
+#     pre2_point = None
+#     pareto_point = []
+#     with open(result_file_path, 'r', encoding='utf-8') as f:
+#         line_list = f.readlines()
+#         f_no_list = []
+#         pareto_points = []
+#         init = 0
+#         for e, line in enumerate(line_list):
+#             if 'pre1.adv' in line:
+#                 pre1_point = abs(float(line_list[e+1].split(',')[0].split('(')[1].strip()))
 
-            if 'pre2.adv' in line:
-                pre2_point = abs(float(line_list[e+1].split(',')[0].split('(')[1].strip())) 
+#             if 'pre2.adv' in line:
+#                 pre2_point = abs(float(line_list[e+1].split(',')[0].split('(')[1].strip())) 
 
-            if ': New point is (' in line:
-                el = line.split(' ')
-                print(el)
-                if init == 0:
-                    init_no = int(el[0][:-1])
-                cost40 = abs(float(el[4][1:-1]))
-                pareto_points.append(cost40)
-                #f_no_list.append(str(int(el[0][:-1])-2))
-                f_no_list.append(str(int(el[0][:-1])-1))
-                init +=1
-    if 'pre1' == req_pareto_point or 'pre2' == req_pareto_point:
-        f_no = req_pareto_point
-        if req_pareto_point == 'pre1':
-            pareto_point.append(pre1_point)
-        elif req_pareto_point == 'pre2':
-            pareto_point.append(pre2_point)
-    else:
-        if f_no_list:
-            if req_pareto_point > 3 and req_pareto_point < 6:
-                approx_p_point = min(pareto_points) + ((max(pareto_points)-min(pareto_points))/3)*(float((req_pareto_point%3))/3)
-            elif req_pareto_point == 6:
-                sorted_pareto_points = sorted(pareto_points)
-                if len(sorted_pareto_points) > 1:
-                    approx_p_point = sorted_pareto_points[1]
-                else:
-                    approx_p_point =  sorted_pareto_points[0]
-            else:
-                approx_p_point = min(pareto_points) + ((max(pareto_points)-min(pareto_points)))*(float(req_pareto_point)/3) ## 3 -> no. of pareto points being considered
-            p_point = min(pareto_points, key=lambda x: abs(x-approx_p_point))
-            pareto_point.append(p_point)
-            f_ind = pareto_points.index(p_point)
-            f_no = f_no_list[f_ind]
-        else:
-            f_no = None
+#             if ': New point is (' in line:
+#                 el = line.split(' ')
+#                 print(el)
+#                 if init == 0:
+#                     init_no = int(el[0][:-1])
+#                 # cost40 = abs(float(el[4][1:-1]))
+#                 cost40 = abs(float(el[5][:-3]))
+#                 pareto_points.append(cost40)
+#                 f_no_list.append(str(int(el[0][:-1])-2))
+#                 print(f_no_list)
+#                 init +=1
+#     if 'pre1' == req_pareto_point or 'pre2' == req_pareto_point:
+#         f_no = req_pareto_point
+#         if req_pareto_point == 'pre1':
+#             pareto_point.append(pre1_point)
+#         elif req_pareto_point == 'pre2':
+#             pareto_point.append(pre2_point)
+#     else:
+#         if f_no_list:
+#             if req_pareto_point > 3 and req_pareto_point < 6:
+#                 approx_p_point = min(pareto_points) + ((max(pareto_points)-min(pareto_points))/3)*(float((req_pareto_point%3))/3)
+#             elif req_pareto_point == 6:
+#                 sorted_pareto_points = sorted(pareto_points)
+#                 if len(sorted_pareto_points) > 1:
+#                     approx_p_point = sorted_pareto_points[1]
+#                 else:
+#                     approx_p_point =  sorted_pareto_points[0]
+#             else:
+#                 approx_p_point = min(pareto_points) + ((max(pareto_points)-min(pareto_points)))*(float(req_pareto_point)/3) ## 3 -> no. of pareto points being considered
+#             p_point = min(pareto_points, key=lambda x: abs(x-approx_p_point))
+#             pareto_point.append(p_point)
+#             f_ind = pareto_points.index(p_point)
+#             f_no = f_no_list[f_ind]
+#         else:
+#             f_no = None
         
-    print(pareto_points)
-    print(pareto_point)
-    print(f_no)
-    return f_no
+#     print(pareto_points)
+#     print(pareto_point)
+#     print(f_no)
+#     return f_no
 
+
+def read_prism_output(result_file_path:str, req_pareto_point):
+
+    filename_output:dict = {}
+    prev_file_no = None
+    with open(result_file_path, 'r', encoding='utf-8') as f:
+        prev_found_adversary = False
+        for lines in f.readlines():
+            if prev_found_adversary and lines[0:8] == 'Computed':
+                filename_output[prev_file_no] = (float(lines.split( )[2][1:-1]), float(lines.split( )[3][:-1]))
+            if lines[0:9] == 'Adversary':
+                prev_found_adversary = True
+                prev_file_no = int(lines.split( )[4][-7:-6])
+            else:
+                prev_found_adversary = False
+    output = None
+    max_value = -100
+    for key, values in filename_output.items():
+        if values[1] > max_value:
+            output = key
+            max_value = values[1]
+
+    max_battery = -1000
+    output2 = None
+    for key, values in filename_output.items():
+        if abs(max_value - values[1]) < 0.5:
+            if values[0] > max_battery:
+                output2 = key
+                max_battery = values[0]
+
+    print("Best file")
+    print(output)
+    print("Optimal")
+    print(output2)
+    return str(output2)
 
 def round_off_add_to_one(data:list, decimal_place=2):
         """ Step 1: Round each probability to {decimal_place} decimals

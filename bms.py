@@ -14,6 +14,7 @@ from data_model.BatteryScenarioDto import DemandDto, AlgorithmDto, GoalProgrammi
 from rule_based_approach.rule_based_approach import *
 from threshold_rule_based.threshold_rule_based import ThresholdRuleBasedApproach
 from goal_programming.goal_programming import *
+from battery_charge_scheduling.battery_charge_scheduling import BatteryChargeScheduling
 import os
 
 sim_to_real = 0.5
@@ -416,6 +417,21 @@ class Fleet:
                 CHARGERATE, DISCHARGERATE, QUEUERATE, TIMEINTERVAL
             )
             self.battery_manager.setDemandSignal(demand)
+        elif (
+            algorithm.algorithm_type
+            == Algorithm.BATTERY_CHARGE_SCHEDULING.value
+        ):
+            self.battery_manager = BatteryChargeScheduling(
+                3, 0, self.black_board
+            )
+            self.battery_manager.set_bmin(algorithm.battery_min)
+            self.battery_manager.set_battery_parameter(
+                CHARGERATE, DISCHARGERATE, QUEUERATE, TIMEINTERVAL
+            )
+            self.battery_manager.set_demand_signal(demand)
+            self.battery_manager.setTimeHorizon(
+                algorithm.time_horizon
+            )
 
     def behaviour(self):
         self.battery_manager.solve()
