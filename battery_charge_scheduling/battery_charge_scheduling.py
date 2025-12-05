@@ -8,6 +8,10 @@ import csv
 from pathlib import Path
 from .receding_horizon_control import RecedingHorizonControl
 import random
+from .battery_charge_scheduling_environment import BatteryChargeSchedulingEnvironment
+from .q_leanring import QLearning
+from .utils import get_gocharge_model
+import numpy as np
 
 OUTPUTPATH = Path("./output/goal_programming_output_milp.csv")
 FILE_DIRECTORY_NAME = os.path.dirname(os.path.realpath(__file__))
@@ -25,11 +29,19 @@ class BatteryChargeScheduling:
         self.m = None
 
         #Algorithm
+        self.env = None
         self.algo = None
 
         self.dt = None
         self.Bmin = None
         self.Tcharge = 15
+
+        #Probability Model
+        self.charge_model = None
+        self.discharge_model = None
+        self.go_charge_model = None
+        self.task_prob = None
+        self.reward_prob = None
 
         self.demand_signal = None
 
@@ -49,14 +61,25 @@ class BatteryChargeScheduling:
         self.black_board.register(self.global_key(), 0, Data.Battery)
         self.black_board.register(self.global_key(), 0, Data.Battery_Mode)
 
-    def initialize_algorithm(self, timeHorizon:int):
-        self.generate_battery_model()
-        self.generate_task_n_reward_probability()
-        self.algo = RecedingHorizonControl(pareto_point=4, horizon=timeHorizon)
+    def initialize_algorithm(self, init_time, init_battery, init_task, init_charging):
+        task_horizon_prob = {}
+        for i in range(self.m):
+            task_horizon_prob[i] = self.task_prob[self.time + (i * self.dt)]
+        self.env = BatteryChargeSchedulingEnvironment(
+            self.charge_model,
+            self.discharge_model,
+            self.go_charge_model,
+            task_horizon_prob,
+            self.reward_prob
+        )
+        self.env.set_reset_parameter(init_time=init_time,
+                                     init_battery=init_battery,
+                                     init_task=init_task,
+                                     init_charging=init_charging)
+        self.algo = QLearning(self.env)
 
     def setTimeHorizon(self, timeHorizon: int):
         self.m = timeHorizon
-        self.initialize_algorithm(self.m)
 
     def set_bmin(self, bmin):
         self.Bmin = bmin
@@ -69,7 +92,9 @@ class BatteryChargeScheduling:
         self.queue_rate = queue_rate * dt
         self.discharge_rate = self.tau_d * dt
 
-    def generate_battery_model(self):
+        self.calculate_battery_model()
+
+    def calculate_battery_model(self):
         """Generate Battery Charging/Discharging Model yaml file using the battery parameter
         Below shows the battery model example:-
         Current batttery: {bnext1: frequency, bnext2: frequency, ...}    
@@ -78,46 +103,59 @@ class BatteryChargeScheduling:
             2: {8: 5, 9: 13}
             3: {9: 4, 10: 14}
         """
-        battery_charge_model_file = FILE_DIRECTORY_NAME + '/models/battery_charge_model.yaml'
-        with open(file=battery_charge_model_file, mode="w", encoding='utf-8') as f:
-            for current_battery in range(101):
-                bnext_frequency = dict()
-                for _ in range(20):
-                    bnext = min(100, round(current_battery + self.charge_rate + random.randint(-1,1)))
-                    if bnext in bnext_frequency:
-                        bnext_frequency[bnext] += 1
-                    else:
-                        bnext_frequency[bnext] = 1
-                f.write(f"{current_battery}: {bnext_frequency}\n")
+        self.charge_model = { b:{} for b in range(101)}
+        for current_battery in range(101):
+            bnext_frequency = dict()
+            for _ in range(20):
+                bnext = min(100, round(current_battery + self.charge_rate + random.randint(-1,1)))
+                if bnext in bnext_frequency:
+                    bnext_frequency[bnext] += 1
+                else:
+                    bnext_frequency[bnext] = 1
+            self.charge_model[current_battery] = bnext_frequency
 
-        battery_charge_model_file = FILE_DIRECTORY_NAME + '/models/battery_discharge_model.yaml'
-        with open(file=battery_charge_model_file, mode="w", encoding='utf-8') as f:
-            for current_battery in range(101):
-                bnext_frequency = dict()
-                for _ in range(20):
-                    bnext = max(0, round(current_battery - self.discharge_rate + random.randint(-1,1)))
-                    if bnext in bnext_frequency:
-                        bnext_frequency[bnext] += 1
-                    else:
-                        bnext_frequency[bnext] = 1
-                f.write(f"{current_battery}: {bnext_frequency}\n")
+        self.go_charge_model = get_gocharge_model(self.charge_model)
 
-    def generate_task_n_reward_probability(self):
+        self.discharge_model = { b:{} for b in range(101)}
+        for current_battery in range(101):
+            bnext_frequency = dict()
+            for _ in range(20):
+                bnext = max(0, round(current_battery - self.discharge_rate + random.randint(-1,1)))
+                if bnext in bnext_frequency:
+                    bnext_frequency[bnext] += 1
+                else:
+                    bnext_frequency[bnext] = 1
+            self.discharge_model[current_battery] = bnext_frequency
+
+    def calculate_task_n_reward_probability(self):
+        self.task_prob = np.zeros((260,2))
+        self.reward_prob = np.zeros((260,2))
         if self.demand_signal is None:
-            task_file = FILE_DIRECTORY_NAME + '/models/task_prob.csv'
-            with open(file=task_file, mode="w", encoding='utf-8') as f:
-                f.write("day_interval, task_present_prob, task_not_present_prob\n")
-                for t in range(260):
-                    f.write(f"{t}, {0.95}, {0.05}\n")
+            for t in range(260):
+                self.task_prob[t][0] = 0.95
+                self.task_prob[t][1] = 0.05
+            for t in range(260):
+                self.reward_prob[t][0] = 0.95
+                self.reward_prob[t][1] = 0.05
+        else:
+            #There is a demand signal which needs to be normalized for single robot demand
+            for t in range(260):
+                demand = self.demand_signal.get_demand_value(t) / 40.0
+                print(t, demand)
+                demand = round(demand,3)
+                self.task_prob[t][0] = demand
+                self.task_prob[t][1] = 1 - demand
 
-            reward_file = FILE_DIRECTORY_NAME + '/models/reward_prob.csv'
-            with open(file=reward_file, mode='w', encoding='utf-8') as fr:
-                fr.write("day_interval rew_cluster_1_and_prob rew_cluster_2_and_prob\n")
-                for t in range(260):
-                    fr.write(f"{t} ({1},{0.95}) ({0},{0.05})\n")
+            for t in range(260):
+                demand = self.demand_signal.get_demand_value(t) / 40.0
+                demand = round(demand,3)
+                self.reward_prob[t][0] = demand
+                self.reward_prob[t][1] = 1 - demand
+
 
     def set_demand_signal(self, demand_signal):
         self.demand_signal = demand_signal
+        self.calculate_task_n_reward_probability()
 
     def set_battery_min(self, bmin):
         self.Bmin = bmin
@@ -167,15 +205,28 @@ class BatteryChargeScheduling:
             is_robot_charging = 0
             if robot_battery[3] == Mode_Of_Operation.Charge_Mode:
                 is_robot_charging = 1
-            robot_task_cluster_id = 1 if not is_robot_charging else 0
-            self.algo.initiate(init_battery=robot_battery[2],
-                               init_charging = is_robot_charging,
-                               init_clid=0,
-                               actual_reward=1)
-            print(self.algo.actual_reward)
-            self.algo.obtain_prism_model(self.time)
-            next_state = self.algo.get_next_state(self.time)
-            t, tp, o, e, b, ch, cl = self.algo.get_state(next_state)
+
+            
+            init_time, init_battery, init_task, init_charging = (0,
+                                                                 robot_battery[2],
+                                                                 1 if random.random() < self.task_prob[self.time][0] else 0,
+                                                                 is_robot_charging)
+            self.initialize_algorithm(init_time = init_time,
+                                      init_battery = int(init_battery),
+                                      init_task = init_task,
+                                      init_charging = init_charging)
+            self.algo.training()
+            action = self.algo.get_best_action(s_t = init_time,
+                                               s_battery= int(init_battery),
+                                               s_task = init_task,
+                                               s_charging = init_charging)
+            ch = -1
+            if action == 'gather_reward':
+                ch = 0
+            elif action == 'stay_charging':
+                ch = 1
+            elif action == 'go_charge':
+                ch = 1
             print(ch, robot_battery[3])
             if int(ch) and (robot_battery[3] in [Mode_Of_Operation.Work_Mode, Mode_Of_Operation.Queue_Mode]):
                 robot_require_charging.append((robot_battery[0], robot_battery[2]))
